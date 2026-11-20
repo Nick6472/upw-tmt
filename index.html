@@ -354,6 +354,11 @@
         UPW 관련 논문만 보기
       </label>
       <span class="hint" id="upwHint"></span>
+      <label class="switch" id="appSwitch" style="display:none">
+        <input type="checkbox" id="readInApp">
+        <span class="track"></span>
+        📱 바로읽기를 Claude 앱으로
+      </label>
       <span style="flex:1"></span>
       <button class="btn primary" id="searchBtn">🔍 검색</button>
     </div>
@@ -424,7 +429,8 @@ const DEFAULT_SETTINGS = {
   tagbarOpen: true,
   hideTrNotice: false,
   trEnabled: true,
-  dashOpen: true
+  dashOpen: true,
+  readInApp: true      // 안드로이드: 바로읽기를 Claude 앱으로 열기
 };
 
 const TABS = [
@@ -1051,8 +1057,17 @@ function paperPrompt(p) {
   const url = p.pdfUrl || p.landingUrl;
   return `/paper ${url}\n(제목: ${p.title})`;
 }
-function paperLink(p) {
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+function webPaperLink(p) {
   return `https://claude.ai/new?q=${encodeURIComponent(paperPrompt(p))}`;
+}
+function useAppLink() { return IS_ANDROID && state.settings.readInApp; }
+/* 안드로이드: Claude 앱을 여는 intent 링크 (앱이 없으면 자동으로 웹 주소로 이동) */
+function paperLink(p) {
+  if (!useAppLink()) return webPaperLink(p);
+  const q = encodeURIComponent(paperPrompt(p));
+  return `intent://claude.ai/new?q=${q}#Intent;scheme=claude;package=com.anthropic.claude;`
+       + `S.browser_fallback_url=${encodeURIComponent(webPaperLink(p))};end`;
 }
 
 /* ---------- 키워드 칩 ---------- */
@@ -1236,7 +1251,7 @@ function cardHTML(p) {
     </div>
     <div class="actions">
       ${openUrl
-        ? `<a class="btn primary" data-act="read" href="${esc(paperLink(p))}" target="_blank" rel="noopener" title="Claude 새 채팅에 /paper ${p.pdfUrl ? 'PDF' : 'DOI'} 링크가 입력된 상태로 열립니다">📖 바로읽기 (/paper)</a>`
+        ? `<a class="btn primary" data-act="read" href="${esc(paperLink(p))}" ${useAppLink() ? '' : 'target="_blank" rel="noopener"'} title="Claude 새 채팅에 /paper ${p.pdfUrl ? 'PDF' : 'DOI'} 링크가 입력된 상태로 열립니다">📖 바로읽기 (/paper)</a>`
         : '<button class="btn primary" disabled>📖 바로읽기 (링크 없음)</button>'}
       ${openUrl
         ? `<a class="btn" data-act="open" href="${esc(openUrl)}" target="_blank" rel="noopener">${p.pdfUrl ? '📄 원문 PDF 열기' : '🔗 원문(DOI) 열기'}</a>`
@@ -1322,7 +1337,9 @@ function bindCardEvents(box) {
         const p = findPaper(key);
         if (p && navigator.clipboard) navigator.clipboard.writeText(paperPrompt(p)).catch(() => {});
         if (state.seen && !state.seen[key]) { markSeen([key]); setTimeout(renderList, 300); }
-        $('#status').innerHTML = '📖 Claude가 새 탭에서 열렸습니다. 입력창의 <b>/paper 링크</b>를 확인하고 전송하세요. (입력창이 비어 있으면 붙여넣기 하세요. 이미 복사해 두었습니다.)';
+        $('#status').innerHTML = useAppLink()
+          ? '📱 Claude 앱을 여는 중입니다. 입력창이 비어 있으면 <b>붙여넣기</b> 하세요. (/paper 링크를 복사해 두었습니다.)'
+          : '📖 Claude가 새 탭에서 열렸습니다. 입력창의 <b>/paper 링크</b>를 확인하고 전송하세요. (입력창이 비어 있으면 붙여넣기 하세요. 이미 복사해 두었습니다.)';
       });
       if (act === 'open') el.addEventListener('click', () => {
         // 원문을 열면 그 논문의 NEW 표시를 지움 (새 탭이 열린 뒤 화면 갱신)
@@ -1382,6 +1399,12 @@ document.querySelectorAll('#sortSeg button').forEach(b => {
     renderList();
   };
 });
+
+if (IS_ANDROID) {
+  $('#appSwitch').style.display = '';
+  $('#readInApp').checked = state.settings.readInApp;
+  $('#readInApp').onchange = (e) => { state.settings.readInApp = e.target.checked; saveSettings(); renderList(); };
+}
 
 $('#upwOnly').checked = state.settings.upwOnly;
 $('#upwOnly').onchange = (e) => {
