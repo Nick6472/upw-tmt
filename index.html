@@ -416,7 +416,7 @@
         <path d="M14 26 a6 6 0 0 0 6 6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".85"/>
       </svg>
       <div>
-        <h1>UPW T.M.T <span class="ver" translate="no">v2.1</span></h1>
+        <h1>UPW T.M.T <span class="ver" translate="no">v2.2</span></h1>
       </div>
     </div>
     <div class="head-right">
@@ -630,7 +630,37 @@ const TAG_GROUPS = [
 ];
 
 /* UPW 관련성 판단 용어 */
-const UPW_TERMS = ['ultrapure water', 'ultra-pure water', 'ultra pure water', 'UPW', 'high-purity water', 'high purity water', '초순수'];
+/* ---------- UPW 관련성 판단 기준 ----------
+   ① 초순수 직접 표현  ② 초순수 업계 용어(사용자 지정 목록)  ③ 초록이 없으면 판단 보류(포함)
+   → 셋 중 하나라도 해당하면 관련 논문 */
+const UPW_TERMS = [
+  'ultrapure water', 'ultra-pure water', 'ultra pure water', 'ultrapure', 'UPW',
+  'high-purity water', 'high purity water', 'ultra-high purity water', 'UHP water',
+  'semiconductor-grade water', 'electronic-grade water', '초순수'
+];
+const INDUSTRY_TERMS = [
+  'Reverse osmosis', 'RO', 'Two-pass RO', 'Double-pass RO',
+  'Electrodeionization', 'EDI', 'CEDI',
+  'Ion exchange', 'IX', 'Mixed-bed ion exchange', 'MBIX',
+  'Ultrafiltration', 'UF',
+  'Membrane degasifier', 'MDG', 'Vacuum degasifier',
+  'UV oxidation', '185 nm UV', 'UV disinfection', '254 nm UV',
+  'Activated carbon filtration', 'ACF',
+  'Microfiltration', 'MF', 'Sub-micron filtration', 'Point-of-use filter', 'POU filter',
+  'Catalytic resin', 'Nanofiltration', 'NF',
+  'Total organic carbon', 'TOC', 'Low-molecular-weight organics', 'LMWOs', 'Urea', 'Isopropyl alcohol', 'IPA',
+  'Dissolved oxygen', 'DO',
+  'Dissolved silica', 'Reactive silica', 'Colloidal silica', 'Boron removal',
+  'Trace metals', 'Metallic impurities', 'Sub-visible particles', 'Nanoparticles',
+  'Endotoxin', 'Pyrogen', 'Resistivity',
+  'Membrane fouling', 'Biofouling', 'Membrane scaling', 'Clean-in-place', 'CIP',
+  'Resin regeneration', 'Resin degradation', 'Leachables', 'Biofilm control',
+  'Silt density index', 'SDI', 'Flux decline', 'Differential pressure',
+  'Semiconductor wastewater reclamation', 'UPW reclaim', 'UPW recovery', 'Closed-loop water system',
+  'Advanced oxidation processes', 'AOPs', 'Vacuum membrane distillation', 'VMD',
+  'Forward osmosis', 'FO', 'Brine minimization', 'Zero liquid discharge', 'ZLD',
+  'Peroxide quenching', 'Residual H2O2 removal'
+];
 
 /* ---------- 태그 매칭기 만들기 ---------- */
 function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -650,6 +680,7 @@ TAG_GROUPS.forEach(g => g.tags.forEach(t => {
   TAG_INDEX.push({ key: `${g.id}:${t.name}`, name: t.name, group: g.id, cls: g.cls, matchers: t.terms.map(makeMatcher) });
 }));
 const UPW_MATCHERS = UPW_TERMS.map(makeMatcher);
+const INDUSTRY_MATCHERS = INDUSTRY_TERMS.map(makeMatcher);
 
 function textMatches(matchers, raw, low) {
   return matchers.some(m => m.abbr ? m.re.test(raw) : m.re.test(low));
@@ -658,7 +689,11 @@ function analyzePaper(p) {
   const raw = `${p.title} ${p.abstract}`;
   const low = raw.toLowerCase().replace(/-/g, ' ');
   p.tags = TAG_INDEX.filter(t => textMatches(t.matchers, raw, low)).map(t => t.key);
-  p.upw = textMatches(UPW_MATCHERS, raw, low);
+  if (textMatches(UPW_MATCHERS, raw, low)) p.upwBasis = 'direct';            // ① 초순수 직접 표현
+  else if (textMatches(INDUSTRY_MATCHERS, raw, low)) p.upwBasis = 'industry'; // ② 업계 용어
+  else if (!String(p.abstract || '').trim()) p.upwBasis = 'noAbstract';       // ③ 초록 없음 → 판단 보류
+  else p.upwBasis = '';
+  p.upw = !!p.upwBasis;
   return p;
 }
 
