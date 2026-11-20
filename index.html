@@ -281,7 +281,6 @@
   .card:hover { border-color: var(--accent); }
   .card.is-new::before { background: var(--new); width: 5px; }
   .card.is-new { background: linear-gradient(90deg, var(--new-soft), var(--surface) 35%); }
-  .card.low { opacity: .55; }
 
   .c-head { display: flex; align-items: center; gap: 6px; min-height: 26px; }
   .c-badges { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
@@ -417,8 +416,7 @@
         <path d="M14 26 a6 6 0 0 0 6 6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".85"/>
       </svg>
       <div>
-        <h1>UPW T.M.T <span class="ver" translate="no">v2.0</span></h1>
-        <div class="brand-sub">반도체용 초순수 최신논문 기술동향</div>
+        <h1>UPW T.M.T <span class="ver" translate="no">v2.1</span></h1>
       </div>
     </div>
     <div class="head-right">
@@ -1209,7 +1207,8 @@ function renderDash() {
 
 /* ---------- 📖 바로읽기 → Claude /paper ---------- */
 function paperPrompt(p) {
-  const url = p.pdfUrl || p.landingUrl;
+  // PDF 대신 논문 사이트 페이지(DOI → 출판사 본문 페이지)를 읽게 함
+  const url = p.landingUrl || p.pdfUrl;
   return `/paper ${url}\n(제목: ${p.title})`;
 }
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
@@ -1319,7 +1318,7 @@ function renderTabs() {
   const hidden = base.filter(p => !p.upw).length;
   $('#upwHint').textContent = state.settings.upwOnly
     ? (hidden ? `관련성 낮은 ${hidden}건 숨김` : '')
-    : (hidden ? `관련성 낮은 ${hidden}건은 흐리게 표시` : '');
+    : (hidden ? `관련성 낮은 ${hidden}건 포함` : '');
 }
 
 /* ---------- 태그 필터 바 ---------- */
@@ -1413,7 +1412,7 @@ function cardHTML(p) {
     </div>
     <div class="actions">
       ${openUrl
-        ? `<a class="btn primary" data-act="read" href="${esc(paperLink(p))}" ${useAppLink() ? '' : 'target="_blank" rel="noopener"'} title="Claude 새 채팅에 /paper ${p.pdfUrl ? 'PDF' : 'DOI'} 링크가 입력된 상태로 열립니다">📖 바로읽기</a>`
+        ? `<a class="btn primary" data-act="read" href="${esc(paperLink(p))}" ${useAppLink() ? '' : 'target="_blank" rel="noopener"'} title="Claude 새 채팅에 /paper 논문 페이지 링크가 입력된 상태로 열립니다">📖 바로읽기</a>`
         : '<button class="btn primary" disabled>📖 바로읽기</button>'}
       ${openUrl
         ? `<a class="btn outline" data-act="open" href="${esc(openUrl)}" target="_blank" rel="noopener">🔗 ${p.landingUrl ? '논문 페이지' : '원문 PDF'}</a>`
