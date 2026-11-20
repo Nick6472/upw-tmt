@@ -1202,7 +1202,8 @@ function cardHTML(p) {
     ? '<span class="src ss">Semantic Scholar</span>'
     : '<span class="src sd">ScienceDirect</span>').join('')
     + (p.sources.length > 1 ? '<span class="src both">🔁 양쪽 수록</span>' : '');
-  const openUrl = p.pdfUrl || p.landingUrl;
+  // 원문 버튼: PDF 직접 다운로드 대신 논문 출처 페이지(DOI → 출판사 페이지)로 이동
+  const openUrl = p.landingUrl || p.pdfUrl;
   const mode = state.tr.mode;
   const trOff = mode === 'on' && !state.settings.trEnabled;   // 사용자가 번역을 끈 상태
   const ko = trOff ? '' : state.tr.cache[p.title];
@@ -1254,7 +1255,7 @@ function cardHTML(p) {
         ? `<a class="btn primary" data-act="read" href="${esc(paperLink(p))}" ${useAppLink() ? '' : 'target="_blank" rel="noopener"'} title="Claude 새 채팅에 /paper ${p.pdfUrl ? 'PDF' : 'DOI'} 링크가 입력된 상태로 열립니다">📖 바로읽기 (/paper)</a>`
         : '<button class="btn primary" disabled>📖 바로읽기 (링크 없음)</button>'}
       ${openUrl
-        ? `<a class="btn" data-act="open" href="${esc(openUrl)}" target="_blank" rel="noopener">${p.pdfUrl ? '📄 원문 PDF 열기' : '🔗 원문(DOI) 열기'}</a>`
+        ? `<a class="btn" data-act="open" href="${esc(openUrl)}" target="_blank" rel="noopener">${p.landingUrl ? '🔗 논문 페이지 열기' : '📄 원문 PDF 열기'}</a>`
         : '<button class="btn" disabled>원문 링크 없음</button>'}
       <button class="btn" data-act="memo">📝 ${memo ? '메모 수정' : '메모'}</button>
     </div>
